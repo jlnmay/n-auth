@@ -1,0 +1,25 @@
+{
+    "name": "jlnmay/n-auth",
+    "description": "Nordstrom auth library",
+    "keywords": ["nordstrom", "auth"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Julián May",
+            "email": "jmay@rjakes.com"
+        }
+    ],
+    "type": "project",
+    "require": {
+		"php": ">=5.4",
+        "guzzlehttp/guzzle": "^6.3"
+    },
+	"require-dev": {
+		"phpunit/phpunit": "5.2.*"
+    },
+	"autoload": {
+        "psr-4": {
+            "JlnMay\\NAuth\\": "src/"
+        }
+    }
+}
