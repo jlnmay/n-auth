@@ -15,7 +15,7 @@ class NAuth
     protected $tokenUri = "v1/token";
     protected $userInfoUri = "v1/userinfo";
     protected $logoutUri = "v1/logout";
-    protected $introspectUri = "v1/instrospect";
+    protected $introspectUri = "v1/introspect";
     protected $bearerToken;
 
     /**
@@ -128,18 +128,20 @@ class NAuth
      *  "User Memberships" portion of the service.
      * @return User info
      */
-    public function getUserInfo($env, $client_id = "")
+    public function getUserInfo($env, $token)
     {
+        if (!empty($token)) {
+            $this->bearerToken = $token; 
+        }
+        
         $queryParameters = array();
         $queryParameters["env"] = $env; 
-
-        if (!empty($client_id)) {
-            $queryParameters["client_id"] = $client_id; 
-        }
-
+        $queryParameters["client_id"] = $this->client_id; 
+        
         $client = new Guzzle(["base_uri" => $this->baseUrl]);
         $response = $client->request("GET", $this->userInfoUri, [
-            'Authorization' => ['Bearer ' . $this->getBearerToken()],
+            'headers' => array(
+            'Authorization' => ['Bearer ' . $this->getBearerToken()]),
             'query' => $queryParameters
         ]);
 
@@ -179,15 +181,31 @@ class NAuth
      */
     public function introspect($env, $token)
     {
-        $client = new Guzzle(["base_uri" => $this->baseUrl]);
-        $response = $client->request("POST", $this->introspectUri, [
-            'Authorization' => ['Basic ' . $this->getAuthorizationHeader()],
-            'Body' => array(
-                "token" => $token, 
-                "env" => $env
-            )
-        ]);
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $this->baseUrl . $this->introspectUri,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode(array("token" => $token, "env" => $env)),
+            CURLOPT_HTTPHEADER => array(
+              "Authorization: Basic " . $this->getAuthorizationHeader(),
+              "Cache-Control: no-cache",
+              "Content-Type: application/json",
+              "Postman-Token: 3c2fad35-a956-4e78-b750-1654dcea5d81"
+            ),
+        ));
+        
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        
+        if ($error) {
+            return $error;
+        } 
 
-        return (string) $response->getBody();
+        return $response; 
     }
 }
