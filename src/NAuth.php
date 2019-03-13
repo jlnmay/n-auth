@@ -66,15 +66,6 @@ class NAuth
     public function login($claims = "openid", $is_implicit = "false", 
         $return_id = false, $state = "", $skip_iwa = false) : string
     {
-        // Validating required query string parameters 
-        if (empty($redirect_uri)) {
-            throw new Exception("Invalid redirect_uri parameter");
-        }
-
-        if (empty($env)) {
-            throw new Exception("Invalid env paremeter");
-        }
-
         $query = [];
         $query["client_id"] = $this->client_id;
         $query["redirect_uri"] = $this->redirect_uri;
