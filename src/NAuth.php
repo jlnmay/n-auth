@@ -101,17 +101,31 @@ class NAuth
      */
     public function token($code)
     {
-        $client = new Guzzle(["base_uri" => $this->baseUrl]);
-        $response = $client->request("POST", $this->tokenUri, [
-            'Authorization' => ['Basic ' . $this->getAuthorizationHeader()],
-            'Body' => array(
-                "code" => $code, 
-                "redirect_uri" => $this->redirect_uri,
-                "env" => $this->env
-            )
-        ]);
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $this->baseUrl . $this->tokenUri,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode(array("code" => $code, "redirect_uri" => $this->redirect_uri, "env" => $this->env)),
+            CURLOPT_HTTPHEADER => array(
+              "Authorization: Basic " . $this->getAuthorizationHeader(),
+              "Cache-Control: no-cache",
+              "Content-Type: application/json"
+            ),
+        ));
+        
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        
+        if ($error) {
+            return $error;
+        } 
 
-        return (string) $response->getBody();
+        return $response;
     }
 
     /**
@@ -196,8 +210,7 @@ class NAuth
             CURLOPT_HTTPHEADER => array(
               "Authorization: Basic " . $this->getAuthorizationHeader(),
               "Cache-Control: no-cache",
-              "Content-Type: application/json",
-              "Postman-Token: 3c2fad35-a956-4e78-b750-1654dcea5d81"
+              "Content-Type: application/json"
             ),
         ));
         
