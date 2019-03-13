@@ -17,6 +17,7 @@ class NAuth
     protected $logoutUri = "v1/logout";
     protected $introspectUri = "v1/introspect";
     protected $bearerToken;
+    private $env = ""; 
 
     /**
      * Initializes variables
@@ -25,7 +26,7 @@ class NAuth
      *  (Can be changed in N-Auth Self Service Dashboard or updated by the N-Auth team)
      * @param $string $client_secret Client secret
      */
-    public function __construct($client_id, $client_secret)
+    public function __construct($client_id, $client_secret, $redirect_uri, $env)
     {
         if (empty($client_id)) {
             throw new Exception("Invalid client_id parameter");
@@ -34,9 +35,19 @@ class NAuth
         }
 
         if (empty($client_secret)) {
-            throw new Exception("Invalid c lient_secret parameter");
+            throw new Exception("Invalid client_secret parameter");
         } else {
             $this->secret_id = $client_secret;
+        }
+
+        if (empty($redirect_uri)) {
+            throw new Exception("Invalid redirect_uri parameter");
+        } else {
+            $this->redirect_uri = $redirect_uri; 
+        }
+
+        if (empty($env)) {
+            $this->env = $env; 
         }
     }
 
@@ -52,7 +63,7 @@ class NAuth
      * @param bool $skip_iwa  (optional, bool) - defaults to 'false' - if set to true, once redirected to the login the IWA check (SSO) will be skipped, 
      *  forcing a user to manually enter credentials - see step 8 for more details
      */
-    public function login($redirect_uri, $env, $claims = "openid", $is_implicit = "false", 
+    public function login($claims = "openid", $is_implicit = "false", 
         $return_id = false, $state = "", $skip_iwa = false) : string
     {
         // Validating required query string parameters 
@@ -66,8 +77,8 @@ class NAuth
 
         $query = [];
         $query["client_id"] = $this->client_id;
-        $query["redirect_uri"] = $redirect_uri;
-        $query["env"] = $env; 
+        $query["redirect_uri"] = $this->redirect_uri;
+        $query["env"] = $this->env; 
         $query["claims"] = $claims;
         $query["is_implicit"] = $is_implicit;
 
@@ -97,7 +108,7 @@ class NAuth
      * @param string $env The environment in which the client is hosted. ex. test
      * @return The token
      */
-    public function token($code, $env)
+    public function token($code)
     {
         $client = new Guzzle(["base_uri" => $this->baseUrl]);
         $response = $client->request("POST", $this->tokenUri, [
@@ -105,7 +116,7 @@ class NAuth
             'Body' => array(
                 "code" => $code, 
                 "redirect_uri" => $this->redirect_uri,
-                "env" => $env
+                "env" => $this->env
             )
         ]);
 
@@ -128,14 +139,14 @@ class NAuth
      *  "User Memberships" portion of the service.
      * @return User info
      */
-    public function getUserInfo($env, $token)
+    public function getUserInfo($token)
     {
         if (!empty($token)) {
             $this->bearerToken = $token; 
         }
         
         $queryParameters = array();
-        $queryParameters["env"] = $env; 
+        $queryParameters["env"] = $this->env; 
         $queryParameters["client_id"] = $this->client_id; 
         
         $client = new Guzzle(["base_uri" => $this->baseUrl]);
@@ -160,14 +171,14 @@ class NAuth
      * Log outs from NAuth
      * @param string $env The environment in which the client is hosted. ex. test
      */
-    public function logout($env)
+    public function logout()
     {
         $client = new Guzzle(["base_uri" => $this->baseUrl]);
         $response = $client->request("POST", $this->logoutUri, [
             'Authorization' => ['Basic ' . $this->getAuthorizationHeader()],
             'Body' => array(
                 "token" => $this->getBearerToken, 
-                "env" => $env
+                "env" => $this->env
             )
         ]);
 
@@ -179,7 +190,7 @@ class NAuth
      * @param string $env The environment in which the client is hosted. ex. test
      * @param string $token The access_token to or id_token to be checked
      */
-    public function introspect($env, $token)
+    public function introspect($token)
     {
         $curl = curl_init();
         curl_setopt_array($curl, array(
@@ -190,7 +201,7 @@ class NAuth
             CURLOPT_TIMEOUT => 30,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => json_encode(array("token" => $token, "env" => $env)),
+            CURLOPT_POSTFIELDS => json_encode(array("token" => $token, "env" => $this->env)),
             CURLOPT_HTTPHEADER => array(
               "Authorization: Basic " . $this->getAuthorizationHeader(),
               "Cache-Control: no-cache",
