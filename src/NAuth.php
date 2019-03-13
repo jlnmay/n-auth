@@ -47,6 +47,8 @@ class NAuth
         }
 
         if (empty($env)) {
+            throw new Exception("Invalid env parameter");
+        } else {
             $this->env = $env; 
         }
     }
